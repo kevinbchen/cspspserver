@@ -1,0 +1,10 @@
+name = CSPSP Server
+maptime = 30
+friendlyfire = off
+maxplayers = 10
+roundtime = 60
+freezetime = 3
+buytime = 60
+port = 42692
+autobalance = on
+alltalk = on
