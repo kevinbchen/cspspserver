@@ -251,8 +251,8 @@ void UdpManager::Update(float dt)
 //------------------------------------------------------------------------------------------------
 Connection* UdpManager::GetConnection(sockaddr_in to)
 {
-	for (int i=0; i<mConnections.size(); i++) {
-		if (CompareIP(mConnections[i]->addr,to)) {
+	for (int i = 0; i < mConnections.size(); i++) {
+		if (CompareIP(mConnections[i]->addr, to)) {
 			return mConnections[i];
 		}
 	}
@@ -271,13 +271,13 @@ Connection* UdpManager::GetConnection(int playerid)
 }
 
 //------------------------------------------------------------------------------------------------
-void UdpManager::AddConnection(sockaddr_in to)
+Connection* UdpManager::AddConnection(int playerid, sockaddr_in to)
 {
 	Connection* connection = new Connection();
 	connection->addr = to;
 	connection->packet = Packet();
 	connection->orderid = 0;
-	connection->playerid = -1;
+	connection->playerid = playerid;
 	connection->timer = 0;
 	connection->sendtimer = 0;
 	connection->ackcounter = 0;
@@ -288,6 +288,7 @@ void UdpManager::AddConnection(sockaddr_in to)
 	connection->reconnecting = false;
 	connection->time = 0.0f;
 	mConnections.push_back(connection);
+	return connection;
 }
 
 //------------------------------------------------------------------------------------------------
@@ -309,7 +310,7 @@ void UdpManager::RemoveConnection(Connection* connection)
 //------------------------------------------------------------------------------------------------
 bool UdpManager::CompareIP(sockaddr_in ptAddr1, sockaddr_in ptAddr2)
 {
-	if (ptAddr1.sin_addr.S_un.S_addr == ptAddr2.sin_addr.S_un.S_addr 
+	if (ptAddr1.sin_addr.S_un.S_addr == ptAddr2.sin_addr.S_un.S_addr
 		&& ptAddr1.sin_port == ptAddr2.sin_port) return true;
 
 	return false;

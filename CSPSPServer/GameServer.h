@@ -174,7 +174,7 @@ public:
 	void Update(float dt);
 	void CheckCollisions();
 	void CheckPlayerCollisions(Person* player);
-	void HandlePacket(Packet &packet, sockaddr_in from, bool sendack = true);
+	void HandlePacket(Packet &packet, Connection* connection, sockaddr_in from, bool sendack = true);
 	void ResetRound(bool fullreset = false);
 	void RespawnPlayer(Person* player, int x, int y);
 	void UpdateScores(Person* attacker, Person* victim, Gun* weapon);

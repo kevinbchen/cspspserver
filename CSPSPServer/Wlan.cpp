@@ -47,6 +47,9 @@ int SocketConnect(Socket* socket1, char* host, int port)
 
 	struct hostent *hp;
 	hp = gethostbyname(host);
+	if (hp == nullptr) {
+		return 0;
+	}
 
 	socket1->addrTo.sin_family = AF_INET;
 	socket1->addrTo.sin_addr.s_addr = inet_addr(inet_ntoa(*(struct in_addr*)hp->h_addr));

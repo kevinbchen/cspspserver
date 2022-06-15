@@ -54,6 +54,16 @@ char Packet::ReadInt8() {
 	return value;
 }
 
+char Packet::PeekInt8() {
+	char value = 0;
+	if (index >= data.size()) {
+		printf("Invalid PeekInt8");
+		return 0;
+	}
+	memcpy(&value, &data[index], sizeof(char));
+	return value;
+}
+
 void Packet::WriteInt8(char value) {
 	data.resize(data.size() + sizeof(char));
 	memcpy(&data[data.size() - sizeof(char)], &value, sizeof(char));

@@ -126,7 +126,7 @@ public:
 	void Update(float dt);
 	Connection* GetConnection(sockaddr_in to);
 	Connection* GetConnection(int playerid);
-	void AddConnection(sockaddr_in to);
+	Connection* AddConnection(int playerid, sockaddr_in to);
 	void RemoveConnection(Connection* connection);
 	bool CompareIP(sockaddr_in ptAddr1, sockaddr_in ptAddr2);
 };

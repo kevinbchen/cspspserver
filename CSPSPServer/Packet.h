@@ -33,6 +33,7 @@ public:
 
 	void WriteInt8(char value);
 	char ReadInt8();
+	char PeekInt8();
 
 	void WriteInt16(short int value);
 	short int ReadInt16();

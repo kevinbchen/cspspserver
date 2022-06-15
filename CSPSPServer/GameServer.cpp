@@ -621,7 +621,23 @@ void GameServer::Update(float dt)
 		if (n > 0) {
 			Packet recvpacket = Packet(buffer,n);
 			if (recvpacket.ReadInt8() == NETVERSION) {
-				HandlePacket(recvpacket,from);
+				Connection* connection = mUdpManager->GetConnection(from);
+
+				// Note: The source sockaddr may not always be the same for the same sender.
+				// For example, when testing locally, I saw an address of 192.168.1.1 (router) 
+				// for the first CONNECT packet, but 192.168.1.47 for subsequent packets.
+				//
+				// Thus, we should lookup the connection object using the playerid instead of
+				// sockaddr. This is really hacky, but to avoid bumping the NETVERSION we can
+				// send the playerid disguised as a message type >= 64 (playerid = type - 64).
+				// Older servers/clients will simply ignore the invalid type. 
+				char type = recvpacket.PeekInt8() & 127;
+				if (type >= 64) {
+					int playerid = type - 64;
+					connection = mUdpManager->GetConnection(playerid);
+				}
+
+				HandlePacket(recvpacket, connection, from);
 			}
 			
 			//int type = recvpacket.ReadInt16();
@@ -675,7 +691,7 @@ void GameServer::Update(float dt)
 				for (int j=0; j<connection->bufferedPackets.size(); j++) {
 
 					if (connection->bufferedPackets[j].GetId() == newid) {
-						HandlePacket(connection->bufferedPackets[j],from,false);
+						HandlePacket(connection->bufferedPackets[j], connection, connection->addr, false);
 						//connection->bufferedPackets.erase(connection->bufferedPackets.begin()+j);
 						//j--;
 						more = true;
@@ -2219,9 +2235,7 @@ void GameServer::CheckPlayerCollisions(Person* player)
 	}
 }
 
-void GameServer::HandlePacket(Packet &packet, sockaddr_in from, bool sendack) {
-
-	Connection* connection = mUdpManager->GetConnection(from);
+void GameServer::HandlePacket(Packet &packet, Connection* connection, sockaddr_in from, bool sendack) {
 	if (connection != NULL) {
 		connection->timer = 0;
 	}
@@ -2292,8 +2306,7 @@ void GameServer::HandlePacket(Packet &packet, sockaddr_in from, bool sendack) {
 				if (reconnecting == true) {
 					mUdpManager->RemoveConnection(connection);
 				}
-				mUdpManager->AddConnection(from);
-				connection = mUdpManager->GetConnection(from);
+				connection = mUdpManager->AddConnection(GetPlayerId(), from);
 
 				// send ack and reset the orderid
 				connection->orderid = ackid;
@@ -2359,7 +2372,11 @@ void GameServer::HandlePacket(Packet &packet, sockaddr_in from, bool sendack) {
 				sendpacket.WriteInt32(mMapOverviewSize);
 				mUdpManager->SendReliable(sendpacket,connection,true);
 				sendpacket.Clear();
-				
+
+				// Send playerid disguised as an invalid message type
+				sendpacket.WriteInt8(connection->playerid + 64);
+				mUdpManager->Send(sendpacket, connection);
+				sendpacket.Clear();
 			}
 			continue;
 
@@ -2418,11 +2435,10 @@ void GameServer::HandlePacket(Packet &packet, sockaddr_in from, bool sendack) {
 				player->mMovementStyle = movementstyle;
 				player->mTime = &mTime;
 				
-				player->mId = GetPlayerId();
+				player->mId = connection->playerid;
 				player->SetState(DEAD);
 				strcpy(player->mAccountName,accountname);
 				memcpy(player->mIcon,icon,datalength);
-				connection->playerid = player->mId;
 
 				mPeople.push_back(player);
 
@@ -2863,8 +2879,8 @@ void GameServer::HandlePacket(Packet &packet, sockaddr_in from, bool sendack) {
 				int speed = packet.ReadInt8();
 				int angle = packet.ReadInt8();
 
-				if (mUdpManager->GetConnection(from) == NULL) break;
-				if (mUdpManager->GetConnection(from)->playerid != id) {
+				if (connection == NULL) break;
+				if (connection->playerid != id) {
 					break;
 				}
 				Person* player = GetPerson(id);
@@ -4133,12 +4149,13 @@ Person* GameServer::GetPerson(int id) {
 
 int GameServer::GetPlayerId() {
 	mPlayerCounter++;
-	if (mPlayerCounter > 127) {
-		for (mPlayerCounter=0; mPlayerCounter<=127; mPlayerCounter++) {
+	if (mPlayerCounter > 63) {
+		for (mPlayerCounter=0; mPlayerCounter<=63; mPlayerCounter++) {
 			bool taken = false;
-			for (int i=0; i<mPeople.size(); i++) {
-				if (mPeople[i]->mId == mPlayerCounter) {
+			for (int i = 0; i < mUdpManager->mConnections.size(); i++) {
+				if (mUdpManager->mConnections[i]->playerid == mPlayerCounter) {
 					taken = true;
+					break;
 				}
 			}
 			if (!taken) break;
