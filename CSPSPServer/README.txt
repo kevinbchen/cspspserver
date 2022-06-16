@@ -1,6 +1,6 @@
 ===============================================================================
   CSPSP Server                                                     Kevin Chen
-  version 1.51                                                           2011		
+  version 1.51b                                                          2011		
   
   official site: http://cspsp.appspot.com
   forums:        http://z4.invisionfree.com/CSPSP

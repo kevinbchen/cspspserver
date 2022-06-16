@@ -23,7 +23,7 @@ void GameServer::Init() {
 	mCursorTimer = 0.0f;
 
 	//cout << "CSPSP Server v1.0\n\n>\n\n";
-	mOutput += "CSPSP Server v1.51\n \n";
+	mOutput += "CSPSP Server v1.51b\n \n";
 
 	if (GetConfig("data/config.txt","port") != NULL) {
 		mPort = abs(atoi(GetConfig("data/config.txt","port")));
