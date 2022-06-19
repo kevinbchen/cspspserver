@@ -1,10 +1,13 @@
 #include "GameServer.h"
 
+using std::cout;
+using std::string;
+
 void error(char *msg)
 {
 	if (errno != 0) {
-    perror(msg);
-	cout << errno;
+		perror(msg);
+		cout << errno;
 	}
     //exit(0);
 }
@@ -22,8 +25,8 @@ void GameServer::Init() {
 
 	mCursorTimer = 0.0f;
 
-	//cout << "CSPSP Server v1.0\n\n>\n\n";
-	mOutput += "CSPSP Server v1.51b\n \n";
+	cout << "CSPSP Server v1.51b\n \n";
+	cout << "Type /help for commands\n";
 
 	if (GetConfig("data/config.txt","port") != NULL) {
 		mPort = abs(atoi(GetConfig("data/config.txt","port")));
@@ -140,8 +143,7 @@ void GameServer::Init() {
 	
 	for (int i=0; i<mNumGuns; i++) {
 		if (mGuns[i].mId == -1) { //mGuns[i] == NULL
-			//cout << "Error: Gun configs could not be loaded\n";
-			mOutput += "Error: Gun configs could not be loaded\n";
+			cout << "Error: Gun configs could not be loaded\n";
 			mHasError = true;
 			return;
 		}
@@ -194,7 +196,9 @@ void GameServer::Init() {
 				char* name = new char[1024];
 				strcpy(name,(char*)buffer);
 				mBannedPeople.push_back(name);
-				mBanList->Add(gcnew System::String(name));
+				if (mOnBanListUpdate) {
+					mOnBanListUpdate();
+				}
 			}
 		}
 		fclose(file);
@@ -347,28 +351,12 @@ void GameServer::Init() {
 			mMapIndex = 0;
 		}
 		if (mMapIndex == startindex) {
-			//cout << "Error: No maps could be loaded\n";
-			mOutput += "Error: No maps could be loaded\n";
+			cout << "Error: No maps could be loaded\n";
 			mHasError = true;
 			return;
 		}
 	}
-	//cout << "Map ";
-	//cout << mMapName;
-	//cout << " loaded\n";
-	mOutput += "Map ";
-	mOutput += mMapName;
-	mOutput += " loaded\n";
-
-	/*if (mMap->Load(mMapName)) {
-	}
-	else {
-		cout << "Error: Map could not be loaded\n";
-		while (1) {
-			Sleep(100);
-		}
-	}
-	mMap->Reset(mGunCounter);*/
+	cout << "Map " << mMapName << " loaded\n";
 
 	mNumPlayers = 0;
 	mNumCTs = 0;
@@ -382,47 +370,27 @@ void GameServer::Init() {
 
 	mPingTimer = 0;
 
-	//cout << "Contacting master server...\n";
-	mOutput += "Contacting master server...\n";
+	cout << "Contacting master server...\n";
 
 	int n = Register();
 
 	if (n == 0) {
-		//cout << "Successfully registered with master server as ";
-		//cout << "\"";
-		//cout << mName;
-		//cout << "\" - ";
-		//cout << ipaddress.c_str();
-		//cout << ":";
-		//cout << mPort;
-		//cout << "\n";		
-		mOutput += "Successfully registered with master server as ";
-		mOutput += "\"";
-		mOutput += mName;
-		mOutput += "\" - ";
-		mOutput += ipaddress.c_str();
-		mOutput += ":";
-		char buffer[10];
-		mOutput += itoa(mPort,buffer,10);
-		mOutput += "\n";	
+		cout << "Successfully registered with master server as ";
+		cout << "\"" << mName << "\" - ";
+		cout << ipaddress.c_str() << ":" << mPort << "\n";			
 	}
 	else if (n == 1) {
-		//cout << "Error registering server: Server already registered\n";
-		mOutput += "Error registering server: Server already registered\n";
+		cout << "Error registering server: Server already registered\n";
 	}
 	else if (n == 2) {
-		//cout << "Error registering server: Version outdated\n";
-		//cout << "Please download the newest version of the server\n";
-		mOutput += "Error registering server: Version outdated\n";
-		mOutput += "Please download the newest version of the server (http://cspsp.appspot.com)\n";
+		cout << "Error registering server: Version outdated\n";
+		cout << "Please download the newest version of the server (http://cspsp.appspot.com)\n";
 	}
 	else if (n == 3) {
-		//cout << "Error registering server: Supplied IP does not match\n";
-		mOutput += "Error registering server: Supplied IP does not match\n";
+		cout << "Error registering server: Supplied IP does not match\n";
 	}
 	else if (n == 4) {
-		//cout << "Error contacting master server\n";
-		mOutput += "Error contacting master server\n";
+		cout << "Error contacting master server\n";
 	}	
 	//closesocket(websock);
 
@@ -605,8 +573,7 @@ void GameServer::Update(float dt)
 			if (strstr(buffer,"REGISTER")) {
 				mUpdateTimer = 0.0f;
 				mUpdating = false; 
-				//cout << "Updated master server info\n";
-				mOutput += "Updated master server info\n";
+				cout << "Updated master server info\n";
 			}
 		}
 	}
@@ -753,22 +720,8 @@ void GameServer::Update(float dt)
 
 			Person* player = GetPerson(id);
 			if (player != NULL) {
-				//cout << player->mName;
-				/*mOutput += player->mName;
-				if (strcmp(player->mName,"nataku92") == 0) {
-					mOutput += " [CSPSP dev]";
-				}*/
-				mOutput += player->mName;
-				mOutput += " timed out\n";
+				cout << player->mName << " timed out\n";
 			}
-			//cout << "(#";
-			//cout << id;
-			//cout << ") timed out";
-			//cout << "\n";
-			/*mOutput += "(#";
-			char idbuffer[10];
-			mOutput += itoa(id,idbuffer,10);
-			mOutput += ") timed out\n";*/
 			mUdpManager->RemoveConnection(mUdpManager->mConnections[i]);
 			RemovePerson(player);
 		}
@@ -816,19 +769,13 @@ void GameServer::Update(float dt)
 				mMapIndex = 0;
 			}
 			if (mMapIndex == startindex) {
-				//cout << "Error: No maps could be loaded\n";
-				mOutput += "Error: No maps could be loaded\n";
+				cout << "Error: No maps could be loaded\n";
 				mHasError = true;
 				return;
 			}
 		}
 
-		//cout << "Map changed to ";
-		//cout << mMapName;
-		//cout << "\n";	
-		mOutput += "Map changed to ";
-		mOutput += mMapName;
-		mOutput += "\n";
+		cout << "Map changed to " << mMapName << "\n";
 	}
 
 
@@ -890,31 +837,30 @@ void GameServer::Update(float dt)
 					mWinner = id;
 
 					if (player != NULL) {
-						mOutput += GetPersonName(player);
-						mOutput += " Wins\n";
+						cout << GetPersonName(player) << " Wins\n";
 					}
 					else {
 						mWinner = TIE;
-						mOutput += "Round Draw\n";
+						cout << " RoundDraw\n";
 					}
 				}
 				else if (mGameType == CTF) {
 					if (mNumFlags[CT] > mNumFlags[T]) {
 						mWinner = CT;
-						mOutput += "Counter-Terrorists Win\n";
+						cout << "Counter-Terrorists Win\n";
 					}
 					else if (mNumFlags[CT] < mNumFlags[T]) {
 						mWinner = T;
-						mOutput += "Terrorists Win\n";
+						cout << "Terrorists Win\n";
 					}
 					else {
 						mWinner = TIE;
-						mOutput += "Round Draw\n";
+						cout << "Round Draw\n";
 					}
 				}
 				else if (mGameType == TEAM) {
 					mWinner = TIE;
-					mOutput += "Round Draw\n";
+					cout << "Round Draw\n";
 				}
 				Packet sendpacket = Packet();
 				sendpacket.WriteInt8(WINEVENT);
@@ -1896,8 +1842,7 @@ void GameServer::CheckCollisions()
 								}
 								person1->mNumKills += 5;
 
-								mOutput += GetPersonName(person1);
-								mOutput += " captured the enemy flag\n";
+								cout << GetPersonName(person1) << " captured the enemy flag\n";
 
 								Packet sendpacket = Packet();
 								sendpacket.WriteInt8(CAPTUREFLAG);
@@ -1939,8 +1884,7 @@ void GameServer::CheckCollisions()
 								person1->mMoney = 16000;
 							}
 
-							mOutput += GetPersonName(person1);
-							mOutput += " returned the flag\n";
+							cout << GetPersonName(person1) << " returned the flag\n";
 
 							Packet sendpacket = Packet();
 							sendpacket.WriteInt8(RETURNFLAG);
@@ -1968,8 +1912,7 @@ void GameServer::CheckCollisions()
 								person1->mMoney = 16000;
 							}
 
-							mOutput += GetPersonName(person1);
-							mOutput += " has the enemy flag\n";
+							cout << GetPersonName(person1) << " has the enemy flag\n";
 
 							Packet sendpacket = Packet();
 							sendpacket.WriteInt8(PICKUPFLAG);
@@ -2441,7 +2384,9 @@ void GameServer::HandlePacket(Packet &packet, Connection* connection, sockaddr_i
 				memcpy(player->mIcon,icon,datalength);
 
 				mPeople.push_back(player);
-
+				if (mOnPlayerListUpdate) {
+					mOnPlayerListUpdate();
+				}
 
 				sendpacket.WriteInt8(GAMEINFO);
 				sendpacket.WriteChar(mName);
@@ -2609,15 +2554,7 @@ void GameServer::HandlePacket(Packet &packet, Connection* connection, sockaddr_i
 					}
 				}
 
-				//cout << player->mName;
-				//cout << "(#";
-				//cout << player->mId;
-				//cout << ") connected";
-				//cout << "\n";
-				mOutput += GetPersonName(player);
-				mOutput += " connected\n";
-
-				mPlayerList->Add(gcnew System::String(player->mName));
+				cout << GetPersonName(player) << " connected\n";
 
 				break;
 			}
@@ -2658,22 +2595,8 @@ void GameServer::HandlePacket(Packet &packet, Connection* connection, sockaddr_i
 
 					Person* player = GetPerson(id);
 					if (player != NULL) {
-						//cout << player->mName;
-						/*mOutput += player->mName;
-						if (strcmp(player->mName,"nataku92") == 0) {
-							mOutput += " [CSPSP dev]";
-						}*/
-						mOutput += player->mName;
-						mOutput += " disconnected\n";
+						cout << player->mName << " disconnected\n";
 					}
-					//cout << "(#";
-					//cout << id;
-					//cout << ") disconnected";
-					//cout << "\n";
-					/*mOutput += "(#";
-					char buffer[10];
-					mOutput += itoa(id,buffer,10);
-					mOutput += ") disconnected\n";*/
 
 					RemovePerson(player);
 				}
@@ -2795,24 +2718,16 @@ void GameServer::HandlePacket(Packet &packet, Connection* connection, sockaddr_i
 				if (mGameType == FFA && team != NONE) {
 				}
 				else {
-					//cout << player->mName;
-					//cout << "(#";
-					//cout << id;
-					//cout << ") has joined the ";
-					mOutput += GetPersonName(player);
-					mOutput += " has joined the ";
+					cout << GetPersonName(player) << " has joined the ";
 
 					if (team == CT) {
-						//cout << "Counter-Terrorist Team";
-						mOutput += "Counter-Terrorist Team\n";
+						cout << "Counter-Terrorist Team\n";
 					}	
 					else if (team == T) {
-						//cout << "Terrorist Team";
-						mOutput += "Terrorist Team\n";
+						cout << "Terrorist Team\n";
 					}	
 					else if (team == NONE) {
-						//cout << "Spectators";
-						mOutput += "Spectators\n";
+						cout << "Spectators\n";
 					}
 				}
 
@@ -3388,26 +3303,17 @@ void GameServer::HandlePacket(Packet &packet, Connection* connection, sockaddr_i
 				if (player == NULL) break;
 
 				if (player->mTeam == NONE) {
-					//cout << "*SPEC* ";
-					mOutput += "*SPEC* ";
+					cout << "*SPEC* ";
 				}
 				else {
 					if (isteamonly) {
-						mOutput += "(team) ";
+						cout << "(team) ";
 					}
 					if (player->mState == DEAD) {
-						//cout << "*DEAD* ";
-						mOutput += "*DEAD* ";
+						cout << "*DEAD* ";
 					}
 				}
-				//cout << name;
-				//cout << ": ";
-				//cout << string;
-				//cout << "\n";
-				mOutput += player->mName;
-				mOutput += ": ";
-				mOutput += string;
-				mOutput += "\n";
+				cout << player->mName << ": " << string << "\n";
 
 				for (int i=0; i<mUdpManager->mConnections.size(); i++) {
 					Person* player2 = GetPerson(mUdpManager->mConnections[i]->playerid);
@@ -3688,29 +3594,16 @@ void GameServer::UpdateScores(Person* attacker, Person* victim, Gun* weapon) {
 		}
 	}
 
-	//cout << attacker->mName;
-	//cout << "(#";
-	//cout << attacker->mId;
-	//cout << ") killed ";
-	//cout << victim->mName;
-	//cout << "(#";
-	//cout << victim->mId;
-	//cout << ") with ";
-	//cout << weapon->mName;
-	//cout << "\n";
 	if (weapon != NULL) {
-		mOutput += GetPersonName(attacker);
-		mOutput += " killed ";
+		cout << GetPersonName(attacker) << " killed ";
 
 		if (strcmp(attacker->mName,victim->mName) == 0 && attacker->mId == victim->mId) {
-			mOutput += "self with ";
+			cout << "self with ";
 		}
 		else {
-			mOutput += GetPersonName(victim);
-			mOutput += " with ";
+			cout << GetPersonName(victim) << " with ";
 		}
-		mOutput += weapon->mName;
-		mOutput += "\n";
+		cout << weapon->mName << "\n";
 	}
 
 	if (mGameType == FFA) {
@@ -3727,14 +3620,12 @@ void GameServer::UpdateScores(Person* attacker, Person* victim, Gun* weapon) {
 			if (victim->mTeam == CT) {
 				mWinner = T;
 				mNumTWins++;
-				//cout << "Terrorists Win\n";
-				mOutput += "Terrorists Win\n";
+				cout << "Terrorists Win\n";
 			}
 			else if (victim->mTeam == T) {
 				mWinner = CT;
 				mNumCTWins++;
-				//cout << "Counter-Terrorists Win\n";
-				mOutput += "Counter-Terrorists Win\n";
+				cout << "Counter-Terrorists Win\n";
 			}
 			Packet sendpacket = Packet();
 			sendpacket.WriteInt8(WINEVENT);
@@ -3764,8 +3655,7 @@ void GameServer::UpdateScores(Person* attacker, Person* victim, Gun* weapon) {
 				mFlagY[team2] = victim->mY;
 				mIsFlagHome[team2] = false;
 
-				mOutput += GetPersonName(victim);
-				mOutput += " dropped the enemy flag\n";
+				cout << GetPersonName(victim) << " dropped the enemy flag\n";
 
 				Packet sendpacket = Packet();
 				sendpacket.WriteInt8(DROPFLAG);
@@ -3846,17 +3736,12 @@ void GameServer::ResetRound(bool fullreset) {
 						*mNumTeam1 = *mNumTeam1-1;
 						*mNumTeam2 = *mNumTeam2+1;
 
-						//cout << mPeople[i]->mName;
-						//cout << " has been autoswitched to the ";
-						mOutput += GetPersonName(mPeople[i]);
-						mOutput += " has been autoswitched to the ";
+						cout << GetPersonName(mPeople[i]) << " has been autoswitched to the ";
 						if (mTeam1 == CT) {
-							//cout << "Terrorist Team\n";
-							mOutput += "Terrorist Team\n";
+							cout << "Terrorist Team\n";
 						}
 						else if (mTeam1 == T) {
-							//cout << "Counter-Terrorist Team\n";
-							mOutput += "Counter-Terrorist Team\n";
+							cout << "Counter-Terrorist Team\n";
 						}
 						sendpacket.WriteInt8(SWITCHTEAM);
 						sendpacket.WriteInt8(mPeople[i]->mId);
@@ -4789,87 +4674,37 @@ void GameServer::HandleInput(char* input, bool remote) {
 		int n = sscanf(input,"/%s %s %s",command,value,value2);
 
 		if (strcmpi(command,"help") == 0) {
-			//cout << "Commands:\n";
-			//cout << "  /help - lists available commands and their arguments\n";
-			//cout << "  /timeleft - shows remaining time left for current map\n";
-			//cout << "  /kick [player ID] - kicks player with specified ID\n";
-			//cout << "  /map [map name] - changes to a new map\n";
-			//cout << "  normal text - sends a server message to all players\n";
-			mOutput += "Commands:\n";
-			mOutput += "  /help - lists available commands and their arguments\n";
-			mOutput += "  /timeleft - shows remaining time left for current map\n";
-			mOutput += "  /kick [player name] - kicks player with specified name*\n";
-			mOutput += "  /ban [player name] - bans+kicks player with specified name*\n";
-			mOutput += "  /unban [player name] - unbans player with specified name*\n";
-			mOutput += "  /map [map name] [type] - changes to a new map (type can either be tdm, ctf or ffa; default is tdm)\n";
-			mOutput += "  /resetround - starts a new round and resets scores\n";
-			mOutput += "  normal text - sends a server message to all players\n";
-			mOutput += "  \n";
-			mOutput += "  *name refers to the player's account name, without the clan tag. ";
-			mOutput += "  For example, the account name of someone named \"[clan]name\" would just be \"name\".\n";
-			//cout << "\n";
+			cout << "\nCommands:\n";
+			cout << "  /help - lists available commands and their arguments\n";
+			cout << "  /timeleft - shows remaining time left for current map\n";
+			cout << "  /kick [player name] - kicks player with specified name*\n";
+			cout << "  /ban [player name] - bans+kicks player with specified name*\n";
+			cout << "  /unban [player name] - unbans player with specified name*\n";
+			cout << "  /map [map name] [type] - changes to a new map (type can either be tdm, ctf or ffa; default is tdm)\n";
+			cout << "  /resetround - starts a new round and resets scores\n";
+			cout << "  normal text - sends a server message to all players\n";
+			cout << "  \n";
+			cout << "  *name refers to the player's account name, without the clan tag. ";
+			cout << "  For example, the account name of someone named \"[clan]name\" would just be \"name\".\n";
+			cout << "\n";
 		}
 		else if (strcmpi(command,"timeleft") == 0) {
-			//cout << "Time left: ";
-			mOutput += "Time left: ";
+			cout << "Time left: ";
 			if ((int)((mMapTimer/60.0f)/60.0f) > 0) {
-				//cout << (int)((mMapTimer/60.0f)/60.0f);
-				//cout << "hr ";
-				char buffer[10];
-				mOutput += itoa((int)((mMapTimer/60.0f)/60.0f),buffer,10);
-				mOutput += "hr ";
+				cout << (int)((mMapTimer/60.0f)/60.0f);
+				cout << "hr ";
 			}
 			if ((int)(mMapTimer/60.0f) > 0) {
-				//cout << (int)(mMapTimer/60.0f)%60;
-				//cout << "min ";
-				char buffer[10];
-				mOutput += itoa((int)(mMapTimer/60.0f)%60,buffer,10);
-				mOutput += "min ";
+				cout << (int)(mMapTimer/60.0f)%60;
+				cout << "min ";
 			}
-			//cout << ((int)mMapTimer%60);
-			//cout << "sec\n";
-			char buffer[10];
-			mOutput += itoa(((int)mMapTimer%60),buffer,10);
-			mOutput += "sec\n";
+			cout << ((int)mMapTimer%60);
+			cout << "sec\n";
 		}
 		else if (strcmpi(command,"kick") == 0 && n == 2) {
-			/*int id = atoi(value);
-
-			Person* player = GetPerson(id);
-			if (player == NULL) {
-				//cout << "Player #";
-				//cout << id;
-				//cout << " does not exist\n";
-				mOutput += "Player #";
-				char buffer[10];
-				mOutput += itoa(id,buffer,10);
-				mOutput += " does not exist\n";
-				return;
-			}
-			
-			Kick(player->mName);*/
 			Kick(value);
 		}
 		else if (strcmpi(command,"ban") == 0 && n == 2) {
-			/*int id = 0;
-			int n = sscanf(value,"%d",&id);
-
-			if (n == 1) {
-				Person* player = GetPerson(id);
-				if (player == NULL) {
-					//cout << "Player #";
-					//cout << id;
-					//cout << " does not exist\n";
-					mOutput += "Player #";
-					char buffer[10];
-					mOutput += itoa(id,buffer,10);
-					mOutput += " does not exist\n";
-					return;
-				}
-
-				Ban(player->mName);
-			}*/
-
 			Ban(value);
 		}
 		else if (strcmpi(command,"unban") == 0 && n == 2) {
@@ -4889,20 +4724,10 @@ void GameServer::HandleInput(char* input, bool remote) {
 				}
 			}
 			if (LoadMap(value,type)) {
-				//cout << "Map changed to ";
-				//cout << mMapName;
-				//cout << "\n";	
-				mOutput += "Map changed to ";
-				mOutput += mMapName;
-				mOutput += "\n";	
+				cout << "Map changed to " << mMapName << "\n";		
 			}
 			else {
-				//cout << "Map ";
-				//cout << value;
-				//cout << " does not exist\n";
-				mOutput += "Map ";
-				mOutput += value;
-				mOutput += " does not exist\n";
+				cout << "Map " << value << " does not exist\n";
 			}
 		}
 		else if (strcmpi(command,"timex") == 0 && n == 2) {
@@ -4922,11 +4747,10 @@ void GameServer::HandleInput(char* input, bool remote) {
 		}
 		else if (strcmpi(command,"resetround") == 0) {
 			ResetRound(true);
-			mOutput += "Round reset\n";
+			cout << "Round reset\n";
 		}
 		else {
-			//cout << "Invalid command/argument (Type /help for available ones)\n";
-			mOutput += "Invalid command/argument (Type /help for available ones)\n";
+			cout << "Invalid command/argument (Type /help for available ones)\n";
 		}
 	}
 	else {
@@ -4940,12 +4764,7 @@ void GameServer::HandleInput(char* input, bool remote) {
 				sendpacket.Clear();
 			}
 
-			//cout << "Server: ";
-			//cout << input;
-			//cout << "\n";
-			mOutput += "Server: ";
-			mOutput += input;
-			mOutput += "\n";
+			cout << "Server: " << input << "\n";
 		}
 	}
 }
@@ -4998,8 +4817,7 @@ bool GameServer::LoadMap(char* mapname, int maptype) {
 	if (mMap->Load(mMapName,mGameType)) {
 	}
 	else {
-		//cout << "Error: Map could not be loaded\n";
-		mOutput += "Error: Map could not be loaded\n";
+		cout << "Error: Map could not be loaded\n";
 		mHasError = true;
 		return false;
 	}
@@ -5025,6 +4843,9 @@ bool GameServer::LoadMap(char* mapname, int maptype) {
 		delete mPeople[i];
 	}
 	mPeople.clear();
+	if (mOnPlayerListUpdate) {
+		mOnPlayerListUpdate();
+	}
 
 	for (unsigned int i=0; i<mBullets.size(); i++) {
 		delete mBullets[i];
@@ -5075,8 +4896,6 @@ bool GameServer::LoadMap(char* mapname, int maptype) {
 	}
 	sendpacket.Clear();
 
-	mPlayerList->Clear();
-
 	return true;
 }
 
@@ -5085,7 +4904,6 @@ void GameServer::RemovePerson(Person *player) {
 	if (player == NULL) return;
 
 	//player->Die();
-	mPlayerList->Remove(gcnew System::String(player->mName));
 
 	for (int i=0; i<mPeople.size(); i++) {
 		if (mPeople[i] == player) {
@@ -5115,6 +4933,10 @@ void GameServer::RemovePerson(Person *player) {
 		}
 	}
 	Hash();
+
+	if (mOnPlayerListUpdate) {
+		mOnPlayerListUpdate();
+	}
 }
 
 string GameServer::GetPersonName(Person* player) {
@@ -5193,9 +5015,7 @@ void GameServer::Kick(char* name) {
 	}
 
 	if (player == NULL) {
-		mOutput += "Player ";
-		mOutput += name;
-		mOutput += " does not exist\n";
+		cout << "Player " << name << " does not exist\n";
 		return;
 	}
 
@@ -5215,12 +5035,7 @@ void GameServer::Kick(char* name) {
 	}
 	sendpacket.Clear();
 
-	//cout << "Kicked player #";
-	//cout << id;
-	//cout << "\n";
-	mOutput += "Kicked ";
-	mOutput += name;
-	mOutput += "\n";
+	cout << "Kicked " << name << "\n";
 
 	RemovePerson(player);
 
@@ -5235,9 +5050,7 @@ void GameServer::Ban(char* name) {
 	}
 
 	if (player == NULL) {
-		mOutput += "Player ";
-		mOutput += name;
-		mOutput += " does not exist\n";
+		cout << "Player " << name << " does not exist\n";
 		return;
 	}
 
@@ -5248,7 +5061,9 @@ void GameServer::Ban(char* name) {
 	char* banName = new char[32];
 	strcpy(banName,player->mAccountName);
 	mBannedPeople.push_back(banName);
-	mBanList->Add(gcnew System::String(banName));
+	if (mOnBanListUpdate) {
+		mOnBanListUpdate();
+	}
 
 	FILE* file = fopen("data/banlist.txt","a+");
 	if (file != NULL) {
@@ -5263,9 +5078,7 @@ void GameServer::Ban(char* name) {
 		fclose(file);
 	}
 
-	mOutput += "Banned ";
-	mOutput += banName;
-	mOutput += "\n";
+	cout << "Banned " << banName << "\n";
 
 	Kick(name);
 }
@@ -5280,10 +5093,11 @@ void GameServer::Unban(char* name) {
 			break;
 		}
 	}
+	if (mOnBanListUpdate) {
+		mOnBanListUpdate();
+	}
 
 	if (exists) {
-		mBanList->Remove(gcnew System::String(name));
-
 		FILE* file = fopen("data/banlist.txt","w");
 		if (file != NULL) {
 			for (int i=0; i<mBannedPeople.size(); i++) {
@@ -5292,14 +5106,10 @@ void GameServer::Unban(char* name) {
 			fclose(file);
 		}
 
-		mOutput += "Unbanned ";
-		mOutput += name;
-		mOutput += "\n";
+		cout << "Unbanned " << name << "\n";
 	}
 	else {
-		mOutput += "Player ";
-		mOutput += name;
-		mOutput += " is not on ban list\n";
+		cout << "Player " << name << " is not on ban list\n";
 	}
 }
 

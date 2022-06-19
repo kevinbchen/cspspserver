@@ -13,8 +13,6 @@
 #include <errno.h>
 #include <math.h>
 
-using namespace std;
-
 enum {
 	GAMEINFO = 0,
 	GAMEINFOEND,

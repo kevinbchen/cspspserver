@@ -6,12 +6,6 @@
 
 namespace CSPSPServer {
 
-	void RedirectIOToConsole();
-	static GameServer* server;
-	static float currenttime;
-	static char input[1024];
-	static bool mIsInputWaiting;
-
 	using namespace System;
 	using namespace System::ComponentModel;
 	using namespace System::Collections;
@@ -20,6 +14,17 @@ namespace CSPSPServer {
 	using namespace System::Drawing;
 	using namespace System::Diagnostics;
 	using namespace System::ComponentModel;
+	using namespace System::Runtime::InteropServices;
+
+	static GameServer* server;
+	static float currenttime;
+	static char input[1024];
+	static bool mIsInputWaiting;
+
+	public delegate void OnListUpdateDelegate();
+	static GCHandle playerListUpdateHandle;
+	static GCHandle banListUpdateHandle;
+
 	/// <summary>
 	/// Summary for Form1
 	///
@@ -35,7 +40,6 @@ namespace CSPSPServer {
 	public:
 		Form1(void)
 		{
-			//RedirectIOToConsole();
 			InitializeComponent();
 			//
 			//TODO: Add the constructor code here
@@ -44,11 +48,35 @@ namespace CSPSPServer {
 			currenttime = clock();
 			mIsInputWaiting = false;
 
-			server->mPlayerList = playerListBox->Items;
-			server->mBanList = banListBox->Items;
+			// Redirect stdout to a stringstream
+			std::cout.rdbuf(server->mOutStream.rdbuf());
+
+			// Set player list and ban list update callbacks.
+			// Note that we keep GCHandles to ensure the function pointers stay valid.
+			OnListUpdateDelegate^ playerListUpdateDelegate = gcnew OnListUpdateDelegate(this, &Form1::onPlayerListUpdate);
+			OnListUpdateDelegate^ banListUpdateDelegate = gcnew OnListUpdateDelegate(this, &Form1::onBanListUpdate);
+			playerListUpdateHandle = GCHandle::Alloc(playerListUpdateDelegate);
+			banListUpdateHandle = GCHandle::Alloc(banListUpdateDelegate);
+			server->mOnPlayerListUpdate = static_cast<void (*)(void)>(Marshal::GetFunctionPointerForDelegate(playerListUpdateDelegate).ToPointer());
+			server->mOnBanListUpdate = static_cast<void (*)(void)>(Marshal::GetFunctionPointerForDelegate(banListUpdateDelegate).ToPointer());
 
 			server->Init();
 		}
+
+		void onPlayerListUpdate() {
+			playerListBox->Items->Clear();
+			for (auto* player : server->mPeople) {
+				playerListBox->Items->Add(gcnew System::String(player->mName));
+			}
+		}
+
+		void onBanListUpdate() {
+			banListBox->Items->Clear();
+			for (auto* name : server->mBannedPeople) {
+				banListBox->Items->Add(gcnew System::String(name));
+			}
+		}
+
 
 	protected:
 		/// <summary>
@@ -57,17 +85,15 @@ namespace CSPSPServer {
 		~Form1()
 		{
 			delete server;
+
+			playerListUpdateHandle.Free();
+			banListUpdateHandle.Free();
+
 			if (components)
 			{
 				delete components;
 			}
 		}
-
-	protected: 
-
-
-	protected: 
-
 
 	private: System::Windows::Forms::Timer^  timer1;
 	private: System::Windows::Forms::RichTextBox^  outputBox;
@@ -80,28 +106,11 @@ namespace CSPSPServer {
 	private: System::Windows::Forms::ListBox^  playerListBox;
 	private: System::Windows::Forms::Button^  kickButton;
 	private: System::Windows::Forms::Button^  banButton;
-
-
 	private: System::Windows::Forms::ListBox^  banListBox;
 	private: System::Windows::Forms::GroupBox^  groupBox1;
 	private: System::Windows::Forms::GroupBox^  groupBox2;
 	private: System::Windows::Forms::Button^  unbanButton;
-
-
-
-
-
-
-
-
-	public: 
-
-	public: 
 	private: System::ComponentModel::IContainer^  components;
-
-	protected: 
-
-	protected: 
 
 	private:
 		/// <summary>
@@ -326,6 +335,7 @@ namespace CSPSPServer {
 
 		void UpdateOutput( Object^ /*myObject*/, EventArgs^ /*myEventArgs*/ )
 		{
+
 			float dt = clock()-currenttime;
 			currenttime += dt;
 
@@ -349,40 +359,12 @@ namespace CSPSPServer {
 				mIsInputWaiting = false;
 			}*/
 
-			if (server->mOutput.length() > 0) {
-				char* s = (char*)server->mOutput.c_str();
-				s = strtok(s,"\n");
-				if (s) {
-					while (s) {
-						String ^string= gcnew String(s);
-						if (outputBox->TextLength+string->Length >= 2147483647) {
-							for (int i=string->Length; i<outputBox->TextLength; i++) {
-								if (outputBox->Text[i] == '\n') {
-									outputBox->Text = outputBox->Text->Substring(i);
-									break;
-								}
-							}
-						}
-						outputBox->AppendText(string);
-						outputBox->AppendText("\n");
-						//outputBox->AppendText("\ntest");
+			std::string output = server->mOutStream.str();
+			if (output.length() > 0) {
+				server->mOutStream.str("");
 
-						s = strtok(NULL,"\n");
-					}
-				}
-				else {
-					String ^string= gcnew String(server->mOutput.c_str());
-					if (outputBox->TextLength+string->Length >= 2147483647) { //2147483647
-						for (int i=string->Length; i<outputBox->TextLength; i++) {
-							if (outputBox->Text[i] == '\n') {
-								outputBox->Text = outputBox->Text->Substring(i);
-								break;
-							}
-						}
-					}
-					outputBox->AppendText(string);
-				}
-				server->mOutput = "";
+				String^ systemString = gcnew String(output.c_str());
+				outputBox->AppendText(systemString);
 				outputBox->ScrollToCaret();
 			}
 		}
@@ -454,53 +436,6 @@ private: System::Void unbanButton_Click(System::Object^  sender, System::EventAr
 			 }
 		 }
 };
-
-
-void RedirectIOToConsole(){
-	static const WORD MAX_CONSOLE_LINES = 500;
- int hConHandle;
-
-long lStdHandle;
-    CONSOLE_SCREEN_BUFFER_INFO coninfo;
-    FILE                       *fp;
-
-    // allocate a console for this app
-    AllocConsole();
-
-    // set the screen buffer to be big enough to let us scroll text
-    GetConsoleScreenBufferInfo(GetStdHandle(STD_OUTPUT_HANDLE), 
-                               &coninfo);
-    coninfo.dwSize.Y = MAX_CONSOLE_LINES;
-    SetConsoleScreenBufferSize(GetStdHandle(STD_OUTPUT_HANDLE), 
-                               coninfo.dwSize);
-
-    // redirect unbuffered STDOUT to the console
-    lStdHandle = (long)GetStdHandle(STD_OUTPUT_HANDLE);
-    hConHandle = _open_osfhandle(lStdHandle, _O_TEXT);
-    fp = _fdopen( hConHandle, "w" );
-    *stdout = *fp;
-    setvbuf( stdout, NULL, _IONBF, 0 );
-
-    // redirect unbuffered STDIN to the console
-    lStdHandle = (long)GetStdHandle(STD_INPUT_HANDLE);
-    hConHandle = _open_osfhandle(lStdHandle, _O_TEXT);
-    fp = _fdopen( hConHandle, "r" );
-    *stdin = *fp;
-    setvbuf( stdin, NULL, _IONBF, 0 );
-
-    // redirect unbuffered STDERR to the console
-    lStdHandle = (long)GetStdHandle(STD_ERROR_HANDLE);
-    hConHandle = _open_osfhandle(lStdHandle, _O_TEXT);
-    fp = _fdopen( hConHandle, "w" );
-    *stderr = *fp;
-    setvbuf( stderr, NULL, _IONBF, 0 );
-    
-    // make cout, wcout, cin, wcin, wcerr, cerr, wclog and clog 
-    // point to console as well
-    ios::sync_with_stdio();
-}
-
-
 
 }
 

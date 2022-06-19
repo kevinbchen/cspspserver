@@ -1,29 +1,23 @@
 #pragma once
 
-#include <vcclr.h>
-
-
+#include <functional>
 #include <stdio.h> // For perror() call
 #include <stdlib.h> // For exit() call
-#include <windows.h>
 #include <winsock.h> // Include Winsock Library
 #include <iostream>
 #include <ctime>
 #include <errno.h>
 #include <math.h>
-#include <conio.h>
-//#include "PlayerConnection.h"
+#include <sstream>
 #include "Packet.h"
 #include "Person.h"
 #include "Vector2D.h"
 #include "TileMap.h"
-//#include "UdpManager.h"
+#include "UdpManager.h"
 #include "Collision.h"
 #include "Bullet.h"
 #include "HttpManager.h"
 #include "Grid.h"
-
-using namespace std;
 
 #define bzero(p, l) memset(p, 0, l)
 #define bcopy(s, t, l) memmove(t, s, l)
@@ -53,11 +47,13 @@ struct MapInfo {
 class GameServer
 {
 public:
-	gcroot<System::Windows::Forms::ListBox::ObjectCollection^> mPlayerList;
-	gcroot<System::Windows::Forms::ListBox::ObjectCollection^> mBanList;
+	// Callback functions invoked when mPeople or mBannedPeople is updated, respectively
+	std::function<void()> mOnPlayerListUpdate;
+	std::function<void()> mOnBanListUpdate;
 
 	bool mHasError;
-	string mOutput;
+	//string mOutput;
+	std::stringstream mOutStream;
 
 	WSADATA wsaData;	// Windows socket
 	int sock, length, fromlen;
@@ -71,13 +67,13 @@ public:
 
 	//int websock;
 	//struct sockaddr_in webserver;
-	string ipaddress;
+	std::string ipaddress;
 	int mPort;
 	
-	string mInput;
+	std::string mInput;
 	float mCursorTimer;
 
-	vector<MapInfo> mMapCycle;
+	std::vector<MapInfo> mMapCycle;
 	int mMapIndex;
 	float mMapTime;
 	float mMapTimer;
@@ -194,7 +190,7 @@ public:
 	bool LoadMap(char* mapname, int maptype);
 	void RemovePerson(Person* player);
 
-	string GetPersonName(Person* player);
+	std::string GetPersonName(Person* player);
 	//bool ReadHTTP(char* string);
 
 	char* DecodeText(char* buffer, char* text);
