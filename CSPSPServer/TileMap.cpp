@@ -1,6 +1,11 @@
 
 #include "TileMap.h"
 
+#ifdef _WIN32
+#else
+#define stricmp strcasecmp
+#endif
+
 //------------------------------------------------------------------------------------------------
 TileMap::TileMap(Gun guns[], std::vector<GunObject*>* gunobjects)
 {

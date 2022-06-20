@@ -310,7 +310,7 @@ void UdpManager::RemoveConnection(Connection* connection)
 //------------------------------------------------------------------------------------------------
 bool UdpManager::CompareIP(sockaddr_in ptAddr1, sockaddr_in ptAddr2)
 {
-	if (ptAddr1.sin_addr.S_un.S_addr == ptAddr2.sin_addr.S_un.S_addr
+	if (ptAddr1.sin_addr.s_addr == ptAddr2.sin_addr.s_addr
 		&& ptAddr1.sin_port == ptAddr2.sin_port) return true;
 
 	return false;

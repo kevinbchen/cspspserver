@@ -1,14 +1,24 @@
 #pragma once
 
 #include <functional>
-#include <stdio.h> // For perror() call
-#include <stdlib.h> // For exit() call
-#include <winsock.h> // Include Winsock Library
+#include <stdio.h>
+#include <stdlib.h>
 #include <iostream>
-#include <ctime>
 #include <errno.h>
 #include <math.h>
 #include <sstream>
+
+#ifdef _WIN32
+#include <winsock.h>
+
+#define socklen_t int
+#else
+#include <netinet/in.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#endif
+
 #include "Packet.h"
 #include "Person.h"
 #include "Vector2D.h"
@@ -18,9 +28,6 @@
 #include "Bullet.h"
 #include "HttpManager.h"
 #include "Grid.h"
-
-#define bzero(p, l) memset(p, 0, l)
-#define bcopy(s, t, l) memmove(t, s, l)
 
 #define VERSION 1.51f
 #define NETVERSION 9
@@ -55,8 +62,11 @@ public:
 	//string mOutput;
 	std::stringstream mOutStream;
 
+#ifdef _WIN32
 	WSADATA wsaData;	// Windows socket
-	int sock, length, fromlen;
+#endif
+	int sock, length;
+	socklen_t fromlen;
 	struct sockaddr_in server;
 	struct sockaddr_in from;
 	char buffer[4096];

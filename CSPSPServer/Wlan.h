@@ -2,27 +2,24 @@
 #define _WLAN_H_
 
 #ifdef WIN32
-#include <stdio.h> // For perror() call
-#include <stdlib.h> // For exit() call
-#include <windows.h>
-#include <winsock.h> // Include Winsock Library
-#include <iostream>
-
-#define bzero(p, l) memset(p, 0, l)
-#define bcopy(s, t, l) memmove(t, s, l)
+#include <winsock.h>
 #else
-#include <stdlib.h>
-#include <pspsdk.h>
-#include <psputility.h>
-#include <pspnet_apctl.h>
-#include <pspnet_inet.h>
-#include <pspwlan.h>
+#include <arpa/inet.h>
+#include <fcntl.h>
+#include <netdb.h>
 #include <netinet/in.h>
-#include <pspnet_resolver.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#define closesocket close
+
+/*
+#include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sys/select.h>
 #include <sys/socket.h>
 #include <netdb.h> 
+*/
 #endif
 
 #include <vector>

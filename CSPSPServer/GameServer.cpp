@@ -1,4 +1,11 @@
 #include "GameServer.h"
+#include "Wlan.h"
+#include <chrono>
+
+#ifdef _WIN32
+#else
+#define stricmp strcasecmp
+#endif
 
 using std::cout;
 using std::string;
@@ -45,18 +52,12 @@ void GameServer::Init() {
 
 	mHttpManager = new HttpManager();
 
-	if (WSAStartup(MAKEWORD(2,2), &wsaData) == SOCKET_ERROR) {
-		perror("connection Error.");
-		exit(EXIT_FAILURE);
-	}
-
 	sock=socket(AF_INET, SOCK_DGRAM, 0);
-	unsigned long nonblocking = 1;
-	ioctlsocket(sock, FIONBIO, &nonblocking);
+	SetSockNoBlock(sock, 1);
 
 	if (sock < 0) error("Opening socket");
 	length = sizeof(server);
-	bzero(&server,length);
+	memset(&server, 0, length);
 	server.sin_family=AF_INET;
 	server.sin_addr.s_addr=INADDR_ANY;
 	server.sin_port=htons(mPort);
@@ -230,20 +231,20 @@ void GameServer::Init() {
 		mMapName = "iceworld";
 	}*/
 
-	if (strcmpi(GetConfig("data/config.txt","friendlyfire"),"on") == 0) {
+	if (stricmp(GetConfig("data/config.txt","friendlyfire"),"on") == 0) {
 		mFriendlyFire = ON;
 	}
-	else if (strcmpi(GetConfig("data/config.txt","friendlyfire"),"off") == 0) {
+	else if (stricmp(GetConfig("data/config.txt","friendlyfire"),"off") == 0) {
 		mFriendlyFire = OFF;
 	}
 	else {
 		mFriendlyFire = ON;
 	}
 
-	if (strcmpi(GetConfig("data/config.txt","autobalance"),"on") == 0) {
+	if (stricmp(GetConfig("data/config.txt","autobalance"),"on") == 0) {
 		mAutoBalance = ON;
 	}
-	else if (strcmpi(GetConfig("data/config.txt","autobalance"),"off") == 0) {
+	else if (stricmp(GetConfig("data/config.txt","autobalance"),"off") == 0) {
 		mAutoBalance = OFF;
 	}
 	else {
@@ -297,10 +298,10 @@ void GameServer::Init() {
 		mRoundTime = 30;
 	}
 
-	if (strcmpi(GetConfig("data/config.txt","alltalk"),"on") == 0) {
+	if (stricmp(GetConfig("data/config.txt","alltalk"),"on") == 0) {
 		mAllTalk = ON;
 	}
-	else if (strcmpi(GetConfig("data/config.txt","alltalk"),"off") == 0) {
+	else if (stricmp(GetConfig("data/config.txt","alltalk"),"off") == 0) {
 		mAllTalk = OFF;
 	}
 	else {
@@ -443,8 +444,7 @@ void GameServer::CleanUp() {
 	//closesocket(websock);
 	closesocket(sock);
 
-	// Clean up Winsock
-	WSACleanup();
+	WlanTerm();
 }
 
 void GameServer::Update(float dt)
@@ -4126,8 +4126,6 @@ int GameServer::Register() {
 	strcpy(mHTTPBuffer,"");
 	strcpy(buffer,"");*/
 
-	float starttime;
-
 	//mHttpManager->Connect("74.125.53.141","cspsp.appspot.com",80);
 	mHttpManager->Connect("cspsp.appspot.com","cspsp.appspot.com",80);
 	char request[2000];
@@ -4138,7 +4136,7 @@ int GameServer::Register() {
 	mHttpManager->SendRequest(request);
 
 
-	starttime = clock();
+	auto starttime = std::chrono::steady_clock::now();
 	while (true) {
 		mHttpManager->Update(0.016f);
 		char buffer[8192];
@@ -4156,7 +4154,7 @@ int GameServer::Register() {
 				break;
 			}
 		}
-		if (clock()-starttime > 5000) return 4;
+		if (std::chrono::steady_clock::now() - starttime > std::chrono::seconds(5)) return 4;
 	}
 
 	string name = "";
@@ -4179,7 +4177,7 @@ int GameServer::Register() {
 
 	mHttpManager->SendRequest("/servers/register.html",request,REQUEST_POST);
 
-	starttime = clock();
+	starttime = std::chrono::steady_clock::now();
 	while (true) {
 		mHttpManager->Update(0.016f);
 		char buffer[8192];
@@ -4204,7 +4202,7 @@ int GameServer::Register() {
 			}
 		}
 
-		if (clock()-starttime > 5000) return 4;
+		if (std::chrono::steady_clock::now() - starttime > std::chrono::seconds(5)) return 4;
 	}
 
 
@@ -4673,7 +4671,7 @@ void GameServer::HandleInput(char* input, bool remote) {
 		char value2[128];
 		int n = sscanf(input,"/%s %s %s",command,value,value2);
 
-		if (strcmpi(command,"help") == 0) {
+		if (stricmp(command,"help") == 0) {
 			cout << "\nCommands:\n";
 			cout << "  /help - lists available commands and their arguments\n";
 			cout << "  /timeleft - shows remaining time left for current map\n";
@@ -4688,7 +4686,7 @@ void GameServer::HandleInput(char* input, bool remote) {
 			cout << "  For example, the account name of someone named \"[clan]name\" would just be \"name\".\n";
 			cout << "\n";
 		}
-		else if (strcmpi(command,"timeleft") == 0) {
+		else if (stricmp(command,"timeleft") == 0) {
 			cout << "Time left: ";
 			if ((int)((mMapTimer/60.0f)/60.0f) > 0) {
 				cout << (int)((mMapTimer/60.0f)/60.0f);
@@ -4701,25 +4699,25 @@ void GameServer::HandleInput(char* input, bool remote) {
 			cout << ((int)mMapTimer%60);
 			cout << "sec\n";
 		}
-		else if (strcmpi(command,"kick") == 0 && n == 2) {
+		else if (stricmp(command,"kick") == 0 && n == 2) {
 			Kick(value);
 		}
-		else if (strcmpi(command,"ban") == 0 && n == 2) {
+		else if (stricmp(command,"ban") == 0 && n == 2) {
 			Ban(value);
 		}
-		else if (strcmpi(command,"unban") == 0 && n == 2) {
+		else if (stricmp(command,"unban") == 0 && n == 2) {
 			Unban(value);
 		}
-		else if (strcmpi(command,"map") == 0 && (n == 2 || n == 3)) {
+		else if (stricmp(command,"map") == 0 && (n == 2 || n == 3)) {
 			int type = TEAM;
 			if (n == 3) {
-				if (strcmpi(value2,"tdm") == 0) {
+				if (stricmp(value2,"tdm") == 0) {
 					type = TEAM;
 				}
-				else if (strcmpi(value2,"ffa") == 0) {
+				else if (stricmp(value2,"ffa") == 0) {
 					type = FFA;
 				}
-				else if (strcmpi(value2,"ctf") == 0) {
+				else if (stricmp(value2,"ctf") == 0) {
 					type = CTF;
 				}
 			}
@@ -4730,7 +4728,7 @@ void GameServer::HandleInput(char* input, bool remote) {
 				cout << "Map " << value << " does not exist\n";
 			}
 		}
-		else if (strcmpi(command,"timex") == 0 && n == 2) {
+		else if (stricmp(command,"timex") == 0 && n == 2) {
 			float t = 1.0f;
 			sscanf(value,"%f",&t);
 			if (t > 0.0f && t < 10.0f) {
@@ -4745,7 +4743,7 @@ void GameServer::HandleInput(char* input, bool remote) {
 				sendpacket.Clear();
 			}
 		}
-		else if (strcmpi(command,"resetround") == 0) {
+		else if (stricmp(command,"resetround") == 0) {
 			ResetRound(true);
 			cout << "Round reset\n";
 		}

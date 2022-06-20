@@ -11,10 +11,10 @@
 #ifndef _VECTOR2D_H
 #define _VECTOR2D_H
 
-#ifdef WIN32
+#ifdef _WIN32
 #include <math.h>
 #else
-#include <fastmath.h>
+#include <math.h>
 #endif
 
 

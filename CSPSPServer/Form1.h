@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <io.h>
+#include <chrono>
 
 namespace CSPSPServer {
 
@@ -17,7 +18,7 @@ namespace CSPSPServer {
 	using namespace System::Runtime::InteropServices;
 
 	static GameServer* server;
-	static float currenttime;
+	static std::chrono::time_point<std::chrono::steady_clock> currenttime;
 	static char input[1024];
 	static bool mIsInputWaiting;
 
@@ -45,7 +46,7 @@ namespace CSPSPServer {
 			//TODO: Add the constructor code here
 			//		
 			server = new GameServer();
-			currenttime = clock();
+			currenttime = std::chrono::steady_clock::now();
 			mIsInputWaiting = false;
 
 			// Redirect stdout to a stringstream
@@ -335,11 +336,11 @@ namespace CSPSPServer {
 
 		void UpdateOutput( Object^ /*myObject*/, EventArgs^ /*myEventArgs*/ )
 		{
+			auto now = std::chrono::steady_clock::now();
+			float dt = std::chrono::duration_cast<std::chrono::duration<float, std::milli>>(now - currenttime).count();
+			currenttime = now;
 
-			float dt = clock()-currenttime;
-			currenttime += dt;
-
-			if (!server->mHasError) {;
+			if (!server->mHasError) {
 				server->Update(dt);
 			}
 			//if (n < 0) error("recvfrom");

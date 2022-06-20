@@ -4,14 +4,13 @@
 
 #include "Packet.h"
 #include <vector>
-#include <stdio.h> // For perror() call
-#include <stdlib.h> // For exit() call
-#include <windows.h>
-#include <winsock.h> // Include Winsock Library
-#include <iostream>
-#include <ctime>
-#include <errno.h>
-#include <math.h>
+
+#ifdef _WIN32
+#include <winsock.h>
+#else
+//#include <sys/socket.h>
+#include <netinet/in.h>
+#endif
 
 enum {
 	GAMEINFO = 0,
