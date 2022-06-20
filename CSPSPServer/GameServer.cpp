@@ -4768,43 +4768,30 @@ void GameServer::HandleInput(char* input, bool remote) {
 }
 
 bool GameServer::LoadMap(char* mapname, int maptype) {
-	if (mMapTextFile != NULL) {
-		fclose(mMapTextFile);
-	}
-	if (mMapImageFile != NULL) {
-		fclose(mMapImageFile);
-	}
-	if (mMapOverviewFile != NULL) {
-		fclose(mMapOverviewFile);
-	}
-
-	FILE* file;
 	char mapfile[128];
 	sprintf(mapfile,"maps/%s/map.txt",mapname);
-	file = mMapTextFile = fopen(mapfile,"rb");
-	if (file == NULL) {
+	FILE* mapTextFile = fopen(mapfile,"rb");
+	if (mapTextFile == NULL) {
 		return false;
 	}
-	fseek(file,0,SEEK_END);
-	mMapTextSize = ftell(file);
-	//fclose(file);
+	fseek(mapTextFile,0,SEEK_END);
+	int mapTextSize = ftell(mapTextFile);
 
 	sprintf(mapfile,"maps/%s/tile.png",mapname);
-	file = mMapImageFile = fopen(mapfile,"rb");
-	if (file == NULL) {
+	FILE* mapImageFile = fopen(mapfile,"rb");
+	if (mapImageFile == NULL) {
+		if (mapTextFile != NULL) fclose(mapTextFile);
 		return false;
 	}
-	fseek(file,0,SEEK_END);
-	mMapImageSize = ftell(file);
+	fseek(mapImageFile,0,SEEK_END);
+	int mapImageSize = ftell(mapImageFile);
 
 	sprintf(mapfile,"maps/%s/overview.png",mapname);
-	file = mMapOverviewFile = fopen(mapfile,"rb");
-	if (file == NULL) {
-		mMapOverviewSize = 0;
-	}
-	else {
-		fseek(file,0,SEEK_END);
-		mMapOverviewSize = ftell(file);
+	FILE* mapOverviewFile = fopen(mapfile,"rb");
+	int mapOverviewSize = 0;
+	if (mapOverviewFile != NULL) {
+		fseek(mapOverviewFile,0,SEEK_END);
+		mapOverviewSize = ftell(mapOverviewFile);
 	}
 
 	strcpy(mMapName,(char*)mapname);
@@ -4813,6 +4800,25 @@ bool GameServer::LoadMap(char* mapname, int maptype) {
 	mMap->Unload();
 
 	if (mMap->Load(mMapName,mGameType)) {
+		// Update map file and size member variables
+		if (mMapTextFile != NULL) {
+			fclose(mMapTextFile);
+			mMapTextFile = NULL;
+		}
+		if (mMapImageFile != NULL) {
+			fclose(mMapImageFile);
+			mMapImageFile = NULL;
+		}
+		if (mMapOverviewFile != NULL) {
+			fclose(mMapOverviewFile);
+			mMapOverviewFile = NULL;
+		}
+		mMapTextFile = mapTextFile;
+		mMapImageFile = mapImageFile;
+		mMapOverviewFile = mapOverviewFile;
+		mMapTextSize = mapTextSize;
+		mMapImageSize = mapImageSize;
+		mMapOverviewSize = mapOverviewSize;
 	}
 	else {
 		cout << "Error: Map could not be loaded\n";
