@@ -1,0 +1,4 @@
+* text=auto
+
+# Treat map files as binary to avoid size mismatches
+map.txt binary
