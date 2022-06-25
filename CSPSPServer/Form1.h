@@ -4,6 +4,7 @@
 #include <fcntl.h>
 #include <io.h>
 #include <chrono>
+#include <thread>
 
 namespace CSPSPServer {
 
@@ -42,9 +43,7 @@ namespace CSPSPServer {
 		Form1(void)
 		{
 			InitializeComponent();
-			//
-			//TODO: Add the constructor code here
-			//		
+
 			server = new GameServer();
 			currenttime = std::chrono::steady_clock::now();
 			mIsInputWaiting = false;
@@ -62,6 +61,33 @@ namespace CSPSPServer {
 			server->mOnBanListUpdate = static_cast<void (*)(void)>(Marshal::GetFunctionPointerForDelegate(banListUpdateDelegate).ToPointer());
 
 			server->Init();
+
+			// Main update loop
+			Application::Idle += gcnew System::EventHandler(this, &Form1::UpdateOutput);
+		}
+
+		void UpdateOutput(Object^ /*myObject*/, EventArgs^ /*myEventArgs*/) {
+			MSG msg = {};
+			while (PeekMessage(&msg, nullptr, 0, 0, PM_NOREMOVE) == 0) {
+				auto now = std::chrono::steady_clock::now();
+				std::chrono::duration<double> diff = now - currenttime;
+				float dt = std::chrono::duration_cast<std::chrono::duration<float, std::milli>>(now - currenttime).count();
+				currenttime = now;
+
+				if (!server->mHasError) {
+					server->Update(dt);
+				}
+
+				std::string output = server->mOutStream.str();
+				if (output.length() > 0) {
+					server->mOutStream.str("");
+
+					String^ systemString = gcnew String(output.c_str());
+					outputBox->AppendText(systemString);
+					outputBox->ScrollToCaret();
+				}
+				std::this_thread::sleep_until(now + std::chrono::milliseconds(10));
+			}
 		}
 
 		void onPlayerListUpdate() {
@@ -96,7 +122,7 @@ namespace CSPSPServer {
 			}
 		}
 
-	private: System::Windows::Forms::Timer^  timer1;
+
 	private: System::Windows::Forms::RichTextBox^  outputBox;
 	private: System::Windows::Forms::TextBox^  inputBox;
 	private: System::Windows::Forms::Label^  label1;
@@ -127,8 +153,7 @@ namespace CSPSPServer {
 		void InitializeComponent(void)
 		{
 			this->components = (gcnew System::ComponentModel::Container());
-			System::ComponentModel::ComponentResourceManager^  resources = (gcnew System::ComponentModel::ComponentResourceManager(Form1::typeid));
-			this->timer1 = (gcnew System::Windows::Forms::Timer(this->components));
+			System::ComponentModel::ComponentResourceManager^ resources = (gcnew System::ComponentModel::ComponentResourceManager(Form1::typeid));
 			this->outputBox = (gcnew System::Windows::Forms::RichTextBox());
 			this->inputBox = (gcnew System::Windows::Forms::TextBox());
 			this->label1 = (gcnew System::Windows::Forms::Label());
@@ -148,16 +173,10 @@ namespace CSPSPServer {
 			this->groupBox2->SuspendLayout();
 			this->SuspendLayout();
 			// 
-			// timer1
-			// 
-			this->timer1->Enabled = true;
-			this->timer1->Interval = 10;
-			this->timer1->Tick += gcnew System::EventHandler(this, &Form1::UpdateOutput);
-			// 
 			// outputBox
 			// 
-			this->outputBox->Anchor = static_cast<System::Windows::Forms::AnchorStyles>((((System::Windows::Forms::AnchorStyles::Top | System::Windows::Forms::AnchorStyles::Bottom) 
-				| System::Windows::Forms::AnchorStyles::Left) 
+			this->outputBox->Anchor = static_cast<System::Windows::Forms::AnchorStyles>((((System::Windows::Forms::AnchorStyles::Top | System::Windows::Forms::AnchorStyles::Bottom)
+				| System::Windows::Forms::AnchorStyles::Left)
 				| System::Windows::Forms::AnchorStyles::Right));
 			this->outputBox->DetectUrls = false;
 			this->outputBox->Location = System::Drawing::Point(12, 12);
@@ -169,7 +188,7 @@ namespace CSPSPServer {
 			// 
 			// inputBox
 			// 
-			this->inputBox->Anchor = static_cast<System::Windows::Forms::AnchorStyles>(((System::Windows::Forms::AnchorStyles::Bottom | System::Windows::Forms::AnchorStyles::Left) 
+			this->inputBox->Anchor = static_cast<System::Windows::Forms::AnchorStyles>(((System::Windows::Forms::AnchorStyles::Bottom | System::Windows::Forms::AnchorStyles::Left)
 				| System::Windows::Forms::AnchorStyles::Right));
 			this->inputBox->Location = System::Drawing::Point(28, 287);
 			this->inputBox->MaxLength = 125;
@@ -180,7 +199,7 @@ namespace CSPSPServer {
 			// 
 			// label1
 			// 
-			this->label1->Anchor = static_cast<System::Windows::Forms::AnchorStyles>(((System::Windows::Forms::AnchorStyles::Bottom | System::Windows::Forms::AnchorStyles::Left) 
+			this->label1->Anchor = static_cast<System::Windows::Forms::AnchorStyles>(((System::Windows::Forms::AnchorStyles::Bottom | System::Windows::Forms::AnchorStyles::Left)
 				| System::Windows::Forms::AnchorStyles::Right));
 			this->label1->AutoSize = true;
 			this->label1->Location = System::Drawing::Point(9, 290);
@@ -192,28 +211,30 @@ namespace CSPSPServer {
 			// notifyIcon1
 			// 
 			this->notifyIcon1->ContextMenuStrip = this->contextMenuStrip1;
-			this->notifyIcon1->Icon = (cli::safe_cast<System::Drawing::Icon^  >(resources->GetObject(L"notifyIcon1.Icon")));
+			this->notifyIcon1->Icon = (cli::safe_cast<System::Drawing::Icon^>(resources->GetObject(L"notifyIcon1.Icon")));
 			this->notifyIcon1->Text = L"CSPSPServer";
 			this->notifyIcon1->MouseDoubleClick += gcnew System::Windows::Forms::MouseEventHandler(this, &Form1::notifyIcon1_MouseDoubleClick);
 			// 
 			// contextMenuStrip1
 			// 
-			this->contextMenuStrip1->Items->AddRange(gcnew cli::array< System::Windows::Forms::ToolStripItem^  >(2) {this->restoreToolStripMenuItem, 
-				this->exitToolStripMenuItem});
+			this->contextMenuStrip1->Items->AddRange(gcnew cli::array< System::Windows::Forms::ToolStripItem^  >(2) {
+				this->restoreToolStripMenuItem,
+					this->exitToolStripMenuItem
+			});
 			this->contextMenuStrip1->Name = L"contextMenuStrip1";
-			this->contextMenuStrip1->Size = System::Drawing::Size(113, 48);
+			this->contextMenuStrip1->Size = System::Drawing::Size(114, 48);
 			// 
 			// restoreToolStripMenuItem
 			// 
 			this->restoreToolStripMenuItem->Name = L"restoreToolStripMenuItem";
-			this->restoreToolStripMenuItem->Size = System::Drawing::Size(112, 22);
+			this->restoreToolStripMenuItem->Size = System::Drawing::Size(113, 22);
 			this->restoreToolStripMenuItem->Text = L"Restore";
 			this->restoreToolStripMenuItem->Click += gcnew System::EventHandler(this, &Form1::restoreToolStripMenuItem_Click);
 			// 
 			// exitToolStripMenuItem
 			// 
 			this->exitToolStripMenuItem->Name = L"exitToolStripMenuItem";
-			this->exitToolStripMenuItem->Size = System::Drawing::Size(112, 22);
+			this->exitToolStripMenuItem->Size = System::Drawing::Size(113, 22);
 			this->exitToolStripMenuItem->Text = L"Exit";
 			this->exitToolStripMenuItem->Click += gcnew System::EventHandler(this, &Form1::exitToolStripMenuItem_Click);
 			// 
@@ -251,7 +272,7 @@ namespace CSPSPServer {
 			// 
 			// banListBox
 			// 
-			this->banListBox->Anchor = static_cast<System::Windows::Forms::AnchorStyles>(((System::Windows::Forms::AnchorStyles::Top | System::Windows::Forms::AnchorStyles::Bottom) 
+			this->banListBox->Anchor = static_cast<System::Windows::Forms::AnchorStyles>(((System::Windows::Forms::AnchorStyles::Top | System::Windows::Forms::AnchorStyles::Bottom)
 				| System::Windows::Forms::AnchorStyles::Right));
 			this->banListBox->FormattingEnabled = true;
 			this->banListBox->Location = System::Drawing::Point(7, 22);
@@ -274,7 +295,7 @@ namespace CSPSPServer {
 			// 
 			// groupBox2
 			// 
-			this->groupBox2->Anchor = static_cast<System::Windows::Forms::AnchorStyles>(((System::Windows::Forms::AnchorStyles::Top | System::Windows::Forms::AnchorStyles::Bottom) 
+			this->groupBox2->Anchor = static_cast<System::Windows::Forms::AnchorStyles>(((System::Windows::Forms::AnchorStyles::Top | System::Windows::Forms::AnchorStyles::Bottom)
 				| System::Windows::Forms::AnchorStyles::Right));
 			this->groupBox2->Controls->Add(this->unbanButton);
 			this->groupBox2->Controls->Add(this->banListBox);
@@ -306,7 +327,7 @@ namespace CSPSPServer {
 			this->Controls->Add(this->outputBox);
 			this->Controls->Add(this->groupBox1);
 			this->Controls->Add(this->groupBox2);
-			this->Icon = (cli::safe_cast<System::Drawing::Icon^  >(resources->GetObject(L"$this.Icon")));
+			this->Icon = (cli::safe_cast<System::Drawing::Icon^>(resources->GetObject(L"$this.Icon")));
 			this->Name = L"Form1";
 			this->Text = L"CSPSPServer";
 			this->Resize += gcnew System::EventHandler(this, &Form1::Form1_Resize);
@@ -334,41 +355,6 @@ namespace CSPSPServer {
 				//if (e->KeyCode == Keys::) {
 			}
 
-		void UpdateOutput( Object^ /*myObject*/, EventArgs^ /*myEventArgs*/ )
-		{
-			auto now = std::chrono::steady_clock::now();
-			float dt = std::chrono::duration_cast<std::chrono::duration<float, std::milli>>(now - currenttime).count();
-			currenttime = now;
-
-			if (!server->mHasError) {
-				server->Update(dt);
-			}
-			//if (n < 0) error("recvfrom");
-
-			/*float time = clock();
-			if (16.66666f-(time-currenttime) > 0.0f) {
-				Sleep(16.66666f-(time-currenttime));
-			}*/
-			/*clock_t start_time, cur_time;
-			start_time = clock();
-			while((clock() - start_time) < 16)
-			{
-
-			}*/
-			/*if (mIsInputWaiting) {
-				server->HandleInput(input);
-				mIsInputWaiting = false;
-			}*/
-
-			std::string output = server->mOutStream.str();
-			if (output.length() > 0) {
-				server->mOutStream.str("");
-
-				String^ systemString = gcnew String(output.c_str());
-				outputBox->AppendText(systemString);
-				outputBox->ScrollToCaret();
-			}
-		}
 private: System::Void inputBox_KeyPress(System::Object^  sender, System::Windows::Forms::KeyPressEventArgs^  e) {
 		 }
 
